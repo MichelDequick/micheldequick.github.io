@@ -1,0 +1,74 @@
+---
+import path from "node:path";
+
+interface Props {
+	id?: string;
+	src: string | string[];
+	class?: string;
+	alt?: string;
+	position?: string;
+	basePath?: string;
+}
+
+import { Image } from "astro:assets";
+import { url } from "../../utils/url-utils";
+
+const { id, src, alt, position = "center", basePath = "/" } = Astro.props;
+const className = Astro.props.class;
+
+const srcList = Array.isArray(src) ? src : [src];
+
+// TODO temporary workaround for images dynamic import
+// https://github.com/withastro/astro/issues/3373
+const files = import.meta.glob<ImageMetadata>("../../**", {
+	import: "default",
+});
+
+const resolved = await Promise.all(
+	srcList.map(async (source) => {
+		const isLocal = !(
+			source.startsWith("/") ||
+			source.startsWith("http") ||
+			source.startsWith("https") ||
+			source.startsWith("data:")
+		);
+		const isPublic = source.startsWith("/");
+
+		// biome-ignore lint/suspicious/noImplicitAnyLet: <check later>
+		let img;
+		if (isLocal) {
+			const normalizedPath = path
+				.normalize(path.join("../../", basePath, source))
+				.replace(/\\/g, "/");
+			const file = files[normalizedPath];
+			if (!file) {
+				console.error(
+					`\n[ERROR] Image file not found: ${normalizedPath.replace("../../", "src/")}`,
+				);
+			} else {
+				img = await file();
+			}
+		}
+
+		return { source, isLocal, isPublic, img };
+	}),
+);
+
+const imageClass = "w-full h-full object-cover";
+const imageStyle = `object-position: ${position}`;
+const isCarousel = resolved.length > 1;
+---
+<div id={id} class:list={[className, 'overflow-hidden relative']}>
+    <div class="transition absolute inset-0 dark:bg-black/10 bg-opacity-50 pointer-events-none z-10"></div>
+    {resolved.map((item, index) => {
+        const layerClass = isCarousel
+            ? `banner-image absolute inset-0 transition-opacity duration-1000${index === 0 ? "" : " opacity-0"}`
+            : "";
+        return (
+            <>
+                {item.isLocal && item.img && <Image src={item.img} alt={alt || ""} class:list={[imageClass, layerClass]} style={imageStyle}/>}
+                {!item.isLocal && <img src={item.isPublic ? url(item.source) : item.source} alt={alt || ""} class:list={[imageClass, layerClass]} style={imageStyle}/>}
+            </>
+        );
+    })}
+</div>
