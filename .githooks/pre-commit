@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+#
+# Pre-commit hook: re-encode all repository images without metadata by running
+# scripts/strip-image-metadata.py, then stage any resulting changes.
+
+python scripts/strip-image-metadata.py || exit 1
+git add -u
+exit 0
