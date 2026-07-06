@@ -22,8 +22,12 @@ export type SiteConfig = {
 	};
 	banner: {
 		enable: boolean;
-		src: string;
+		src: string | string[];
 		position?: "top" | "center" | "bottom";
+		carousel?: {
+			enable: boolean;
+			interval: number;
+		};
 		credit: {
 			enable: boolean;
 			text: string;
@@ -47,7 +51,7 @@ export type Favicon = {
 export enum LinkPreset {
 	Home = 0,
 	Archive = 1,
-	About = 2,
+	Resume = 2,
 }
 
 export type NavBarLink = {

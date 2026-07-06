@@ -38,12 +38,15 @@ const isHomePage = pathsEqual(Astro.url.pathname, url("/"));
 // defines global css variables
 // why doing this in Layout instead of GlobalStyles: https://github.com/withastro/astro/issues/6728#issuecomment-1502203757
 const configHue = siteConfig.themeColor.hue;
+const fallbackBanner = Array.isArray(siteConfig.banner.src)
+	? siteConfig.banner.src[0]
+	: siteConfig.banner.src;
 if (!banner || typeof banner !== "string" || banner.trim() === "") {
-	banner = siteConfig.banner.src;
+	banner = fallbackBanner;
 }
 
 // TODO don't use post cover as banner for now
-banner = siteConfig.banner.src;
+banner = fallbackBanner;
 
 const enableBanner = siteConfig.banner.enable;
 
@@ -144,8 +147,6 @@ const bannerOffset =
 
 
 		<slot name="head"></slot>
-
-		<link rel="alternate" type="application/rss+xml" title={profileConfig.name} href={`${Astro.site}rss.xml`}/>
 
 	</head>
 	<body class=" min-h-screen transition " class:list={[{"lg:is-home": isHomePage, "enable-banner": enableBanner}]}
@@ -363,12 +364,38 @@ function showBanner() {
 	banner.classList.remove('opacity-0', 'scale-105');
 }
 
+let bannerCarouselTimer: ReturnType<typeof setInterval> | undefined;
+function setupBannerCarousel() {
+	if (!siteConfig.banner.enable) return;
+
+	const wrapper = document.getElementById('banner-wrapper');
+	if (!wrapper || wrapper.dataset.carousel !== 'true') return;
+
+	const layers = Array.from(
+		document.querySelectorAll<HTMLElement>('#banner .banner-image')
+	);
+	if (layers.length <= 1) return;
+
+	const interval = Number(wrapper.dataset.carouselInterval) || 5000;
+
+	// Clear any previous timer to avoid stacking intervals on hot reloads
+	if (bannerCarouselTimer) clearInterval(bannerCarouselTimer);
+
+	let current = 0;
+	bannerCarouselTimer = setInterval(() => {
+		layers[current].classList.add('opacity-0');
+		current = (current + 1) % layers.length;
+		layers[current].classList.remove('opacity-0');
+	}, interval);
+}
+
 function init() {
 	// disableAnimation()()		// TODO
 	loadTheme();
 	loadHue();
 	initCustomScrollbar();
 	showBanner();
+	setupBannerCarousel();
 }
 
 /* Load settings when entering the site */

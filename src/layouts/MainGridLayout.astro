@@ -36,6 +36,24 @@ const hasBannerCredit =
 	siteConfig.banner.enable && siteConfig.banner.credit.enable;
 const hasBannerLink = !!siteConfig.banner.credit.url;
 
+// Collect the banner images for the carousel.
+// Every image dropped into `src/assets/images/banner/` is picked up automatically
+// and takes priority. When that folder is empty, fall back to the configured
+// `banner.src` (which may itself be a single image or a list).
+const bannerFolder = import.meta.glob(
+	"/src/assets/images/banner/*.{jpeg,jpg,png,gif,webp,avif}",
+);
+const folderBanners = Object.keys(bannerFolder)
+	.sort()
+	.map((filePath) => filePath.replace("/src/", ""));
+const configBanners = Array.isArray(siteConfig.banner.src)
+	? siteConfig.banner.src
+	: [siteConfig.banner.src];
+const bannerList = folderBanners.length > 0 ? folderBanners : configBanners;
+const carouselEnabled =
+	(siteConfig.banner.carousel?.enable ?? true) && bannerList.length > 1;
+const carouselInterval = (siteConfig.banner.carousel?.interval ?? 5) * 1000;
+
 const mainPanelTop = siteConfig.banner.enable
 	? `calc(${BANNER_HEIGHT}vh - ${MAIN_PANEL_OVERLAPS_BANNER_HEIGHT}rem)`
 	: "5.5rem";
@@ -52,9 +70,10 @@ const mainPanelTop = siteConfig.banner.enable
 </div>
 
 <!-- Banner -->
-{siteConfig.banner.enable && <div id="banner-wrapper" class={`absolute z-10 w-full transition duration-700 overflow-hidden`} style={`top: -${BANNER_HEIGHT_EXTEND}vh`}>
+{siteConfig.banner.enable && <div id="banner-wrapper" class={`absolute z-10 w-full transition duration-700 overflow-hidden`} style={`top: -${BANNER_HEIGHT_EXTEND}vh`}
+    data-carousel={carouselEnabled ? "true" : "false"} data-carousel-interval={carouselInterval}>
     <ImageWrapper id="banner" alt="Banner image of the blog" class:list={["object-cover h-full transition duration-700 opacity-0 scale-105"]}
-                  src={siteConfig.banner.src} position={siteConfig.banner.position}
+                  src={bannerList} position={siteConfig.banner.position}
     >
     </ImageWrapper>
 </div>}
